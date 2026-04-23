@@ -2,9 +2,10 @@
 
 **BrainBuddy AI** is a premium, hyper-optimized study planning ecosystem designed for maximum cognitive efficiency. Featuring a sleek **Glassmorphism** aesthetic, it combines narrative productivity with deep-logic AI to help you master complex subjects.
 
-![BrainBuddy AI Preview](https://via.placeholder.com/1200x600/0b1326/ddb7ff?text=BrainBuddy+AI+Premium+Productivity)
+![BrainBuddy AI Preview](file:///C:/Users/nivri/.gemini/antigravity/brain/1641de99-abf3-4cec-9f6f-91ca27e74eee/brainbuddy_ai_preview_1776927237945.png)
 
 ---
+
 
 ## ✨ Key Features
 
@@ -70,9 +71,15 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5174/`.
+---
+
+## 🔗 Access Links
+*   **Local Preview**: [http://localhost:5174/](http://localhost:5174/)
+*   **API Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+*   **Project Roadmap**: [http://localhost:5174/subjects](http://localhost:5174/subjects)
 
 ---
+
 
 ## ☁️ Deployment
 
