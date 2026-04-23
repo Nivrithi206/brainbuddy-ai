@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Plus, BookOpen, Clock, AlertCircle } from 'lucide-react';
+import axios from '../api/axios';
+import { Plus, BookOpen, Clock, AlertCircle, Trash2, Edit2, Check, X, ChevronRight, Hash } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SubjectManager() {
   const [subjects, setSubjects] = useState([]);
   const [newSubject, setNewSubject] = useState('');
+  const [targetTime, setTargetTime] = useState(60);
+  const [editingSubject, setEditingSubject] = useState(null);
+  const [editSubjectName, setEditSubjectName] = useState('');
+  const [editTargetTime, setEditTargetTime] = useState(60);
   
   // Topic form state
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -19,7 +24,7 @@ export default function SubjectManager() {
 
   const fetchSubjects = async () => {
     try {
-      const res = await axios.get('https://vast-sloths-grow.loca.lt/api/subjects');
+      const res = await axios.get('/subjects');
       setSubjects(res.data);
     } catch (err) {
       console.error(err);
@@ -29,8 +34,37 @@ export default function SubjectManager() {
   const handleAddSubject = async () => {
     if (!newSubject.trim()) return;
     try {
-      await axios.post('https://vast-sloths-grow.loca.lt/api/subjects', { name: newSubject });
+      const colors = ['#ddb7ff', '#adc6ff', '#ffb3ad', '#fbbf24', '#34d399'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      await axios.post('/subjects', { name: newSubject, color: randomColor, targetTime });
       setNewSubject('');
+      setTargetTime(60);
+      fetchSubjects();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteSubject = async (id) => {
+    if (!window.confirm('Delete this subject and all its topics?')) return;
+    try {
+      await axios.delete(`/subjects/${id}`);
+      fetchSubjects();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleEditSubject = (subject) => {
+    setEditingSubject(subject._id);
+    setEditSubjectName(subject.name);
+    setEditTargetTime(subject.targetTime || 60);
+  };
+
+  const handleUpdateSubject = async (id) => {
+    try {
+      await axios.put(`/subjects/${id}`, { name: editSubjectName, targetTime: editTargetTime });
+      setEditingSubject(null);
       fetchSubjects();
     } catch (err) {
       console.error(err);
@@ -40,7 +74,7 @@ export default function SubjectManager() {
   const handleAddTopic = async () => {
     if (!topicName.trim() || !selectedSubject) return;
     try {
-      await axios.post(`https://vast-sloths-grow.loca.lt/api/subjects/${selectedSubject}/topics`, {
+      await axios.post(`/subjects/${selectedSubject}/topics`, {
         name: topicName,
         priority,
         difficulty,
@@ -54,45 +88,75 @@ export default function SubjectManager() {
     }
   };
 
+  const handleDeleteTopic = async (subjectId, topicId) => {
+    try {
+      await axios.delete(`/subjects/${subjectId}/topics/${topicId}`);
+      fetchSubjects();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold">Subject Manager</h1>
-        <p className="text-gray-400 mt-2">Add subjects and break them down into topics.</p>
+    <div className="space-y-12 max-w-6xl mx-auto pb-20">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-5xl font-black tracking-tight text-white">
+          Academic <span className="text-secondary text-glow">Roadmap</span>
+        </h1>
+        <p className="text-gray-400 text-lg max-w-2xl">Organize your cognitive load and prioritize topics for maximum efficiency.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Add Subject / Topic */}
-        <div className="space-y-6">
-          <div className="bg-gray-800 border border-gray-700 p-6 rounded-2xl">
-            <h3 className="font-semibold mb-4 flex items-center gap-2"><BookOpen className="w-5 h-5 text-indigo-400" /> New Subject</h3>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={newSubject}
-                onChange={e => setNewSubject(e.target.value)}
-                placeholder="e.g. Data Structures"
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500"
-              />
-              <button 
-                onClick={handleAddSubject}
-                className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
+        {/* Left Column: Management Tools */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* New Subject Card */}
+          <div className="glass-card p-6 border-l-4 border-primary">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" /> New Subject
+            </h3>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={newSubject}
+                  onChange={e => setNewSubject(e.target.value)}
+                  placeholder="Subject Name"
+                  className="flex-1 bg-surface-container/50 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mb-1 block">Target Focus (Min)</label>
+                  <input 
+                    type="number"
+                    value={targetTime}
+                    onChange={e => setTargetTime(parseInt(e.target.value))}
+                    className="w-full bg-surface-container/50 border border-white/5 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary transition-all"
+                  />
+                </div>
+                <button 
+                  onClick={handleAddSubject}
+                  className="p-3 mt-4 bg-primary text-background rounded-xl hover:scale-105 active:scale-95 transition-transform glow-primary"
+                >
+                  <Plus className="w-6 h-6 font-bold" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-gray-800 border border-gray-700 p-6 rounded-2xl">
-            <h3 className="font-semibold mb-4 flex items-center gap-2"><AlertCircle className="w-5 h-5 text-indigo-400" /> Add Topic</h3>
+          {/* Add Topic Card */}
+          <div className="glass-card p-6 border-l-4 border-secondary glow-secondary">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-secondary mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Topic
+            </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Subject</label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mb-1 block">Target Subject</label>
                 <select 
                   value={selectedSubject || ''}
                   onChange={e => setSelectedSubject(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-surface-container/50 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all text-gray-300"
                 >
                   <option value="" disabled>Select Subject</option>
                   {subjects.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
@@ -100,23 +164,23 @@ export default function SubjectManager() {
               </div>
               
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Topic Name</label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mb-1 block">Topic Name</label>
                 <input 
                   type="text" 
                   value={topicName}
                   onChange={e => setTopicName(e.target.value)}
-                  placeholder="e.g. Arrays and Strings"
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                  placeholder="e.g. Backpropagation"
+                  className="w-full bg-surface-container/50 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-gray-400 mb-1 block">Priority</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mb-1 block">Priority</label>
                   <select 
                     value={priority}
                     onChange={e => setPriority(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-surface-container/50 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all"
                   >
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
@@ -124,78 +188,134 @@ export default function SubjectManager() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-400 mb-1 block">Difficulty (1-5)</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mb-1 block">Difficulty</label>
                   <input 
                     type="number" min="1" max="5"
                     value={difficulty}
                     onChange={e => setDifficulty(parseInt(e.target.value))}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-surface-container/50 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Estimated Time (mins)</label>
-                <input 
-                  type="number" step="15"
-                  value={estimatedTime}
-                  onChange={e => setEstimatedTime(parseInt(e.target.value))}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500"
-                />
               </div>
 
               <button 
                 onClick={handleAddTopic}
                 disabled={!selectedSubject || !topicName}
-                className="w-full py-2 mt-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-xl font-medium transition-colors"
+                className="w-full py-3 mt-2 bg-secondary text-background font-black rounded-xl hover:bg-secondary/90 disabled:opacity-30 transition-all uppercase tracking-widest text-xs"
               >
-                Add Topic
+                Inject Topic
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Column: List */}
-        <div className="col-span-2 space-y-4">
+        {/* Right Column: Roadmap List */}
+        <div className="lg:col-span-8 space-y-6">
           {subjects.length === 0 ? (
-            <div className="bg-gray-800/50 border border-gray-700 border-dashed p-8 rounded-2xl text-center text-gray-400">
-              No subjects yet. Add your first subject to get started.
+            <div className="glass-card p-20 text-center border-dashed border-white/5">
+              <p className="text-gray-500 text-lg italic">Your roadmap is currently empty. Initialize a subject to begin.</p>
             </div>
           ) : (
-            subjects.map(subject => (
-              <div key={subject._id} className="bg-gray-800 border border-gray-700 p-6 rounded-2xl">
-                <h3 className="text-lg font-bold text-indigo-400 mb-4 flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: subject.color }}></div>
-                  {subject.name}
-                </h3>
-                
-                {subject.topics.length === 0 ? (
-                  <p className="text-sm text-gray-500">No topics added.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {subject.topics.map((topic, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-900 rounded-xl border border-gray-700/50 hover:border-gray-600 transition-colors">
-                        <div>
-                          <p className="font-medium text-sm">{topic.name}</p>
-                          <div className="flex gap-3 mt-1 text-xs text-gray-400">
-                            <span className={topic.priority === 'High' ? 'text-red-400' : topic.priority === 'Medium' ? 'text-yellow-400' : 'text-green-400'}>
-                              {topic.priority}
-                            </span>
-                            <span>Diff: {topic.difficulty}/5</span>
+            <div className="grid grid-cols-1 gap-6">
+              {subjects.map(subject => (
+                <motion.div 
+                  layout
+                  key={subject._id} 
+                  className="glass-card overflow-hidden group"
+                >
+                  <div className="p-6 flex items-center justify-between bg-white/[0.02]">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-surface-container text-white shadow-inner border border-white/5">
+                        <Hash className="w-5 h-5 opacity-40" />
+                      </div>
+                      
+                      {editingSubject === subject._id ? (
+                        <div className="flex flex-col gap-3 flex-1">
+                          <input 
+                            value={editSubjectName}
+                            onChange={e => setEditSubjectName(e.target.value)}
+                            className="bg-background/50 border border-primary/50 rounded-lg px-3 py-1 text-lg font-bold w-full focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Target Time (Min):</label>
+                            <input 
+                              type="number"
+                              value={editTargetTime}
+                              onChange={e => setEditTargetTime(parseInt(e.target.value))}
+                              className="bg-background/50 border border-primary/50 rounded-lg px-2 py-1 text-xs font-bold w-20 focus:outline-none"
+                            />
+                            <div className="flex-1"></div>
+                            <button onClick={() => handleUpdateSubject(subject._id)} className="p-1 text-green-400 hover:bg-green-400/10 rounded"><Check className="w-5 h-5" /></button>
+                            <button onClick={() => setEditingSubject(null)} className="p-1 text-red-400 hover:bg-red-400/10 rounded"><X className="w-5 h-5" /></button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
-                          <Clock className="w-3 h-3" /> {topic.estimatedTime}m
+                      ) : (
+                        <div className="flex-1">
+                          <h3 className="text-2xl font-black text-white">{subject.name}</h3>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Target Session: {subject.targetTime || 60}m</p>
                         </div>
-                      </div>
-                    ))}
+                      )}
+
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleEditSubject(subject)}
+                        className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteSubject(subject._id)}
+                        className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))
+                  
+                  <div className="p-6 pt-0">
+                    <div className="space-y-3">
+                      {subject.topics.length === 0 ? (
+                        <p className="text-sm text-gray-600 italic py-2">No components mapped for this subject yet.</p>
+                      ) : (
+                        subject.topics.map((topic, idx) => (
+                          <motion.div 
+                            key={topic._id || idx}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex items-center justify-between p-4 bg-background/30 rounded-2xl border border-white/[0.03] group/topic"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`w-2 h-2 rounded-full ${topic.priority === 'High' ? 'bg-tertiary glow-secondary' : topic.priority === 'Medium' ? 'bg-secondary' : 'bg-gray-600'}`}></div>
+                              <div>
+                                <p className="font-bold text-gray-200">{topic.name}</p>
+                                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{topic.priority} Priority • Diff {topic.difficulty}/5</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-1.5 text-gray-400 text-xs bg-surface-container px-3 py-1.5 rounded-xl border border-white/5">
+                                <Clock className="w-3 h-3" /> {topic.estimatedTime}m
+                              </div>
+                              <button 
+                                onClick={() => handleDeleteTopic(subject._id, topic._id)}
+                                className="opacity-0 group-topic/hover:opacity-100 p-2 text-gray-600 hover:text-red-400 transition-all"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 }
+

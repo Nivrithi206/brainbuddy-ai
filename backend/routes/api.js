@@ -3,6 +3,7 @@ const router = express.Router();
 const Subject = require('../models/Subject');
 const Schedule = require('../models/Schedule');
 const User = require('../models/User');
+const Note = require('../models/Note');
 const { generateSchedule } = require('../utils/planner');
 
 // Get all subjects
@@ -18,8 +19,8 @@ router.get('/subjects', async (req, res) => {
 // Add a new subject
 router.post('/subjects', async (req, res) => {
   try {
-    const { name, color } = req.body;
-    const newSubject = new Subject({ name, color, topics: [] });
+    const { name, color, targetTime } = req.body;
+    const newSubject = new Subject({ name, color, targetTime: targetTime || 60, topics: [] });
     await newSubject.save();
     res.json(newSubject);
   } catch (err) {
@@ -42,6 +43,85 @@ router.post('/subjects/:id/topics', async (req, res) => {
   }
 });
 
+// Update a subject
+router.put('/subjects/:id', async (req, res) => {
+  try {
+    const { name, color, targetTime } = req.body;
+    const subject = await Subject.findByIdAndUpdate(
+      req.params.id, 
+      { name, color, targetTime }, 
+      { new: true }
+    );
+    res.json(subject);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a subject
+router.delete('/subjects/:id', async (req, res) => {
+  try {
+    await Subject.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Subject deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a topic from a subject
+router.delete('/subjects/:subjectId/topics/:topicId', async (req, res) => {
+  try {
+    const subject = await Subject.findById(req.params.subjectId);
+    if (!subject) return res.status(404).json({ error: 'Subject not found' });
+    
+    subject.topics = subject.topics.filter(t => t._id.toString() !== req.params.topicId);
+    await subject.save();
+    res.json(subject);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Note Routes ---
+router.get('/notes', async (req, res) => {
+  try {
+    const notes = await Note.find().sort({ updatedAt: -1 });
+    res.json(notes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/notes', async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    const note = new Note({ title, content });
+    await note.save();
+    res.json(note);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/notes/:id', async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    const note = await Note.findByIdAndUpdate(req.params.id, { title, content, updatedAt: Date.now() }, { new: true });
+    res.json(note);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/notes/:id', async (req, res) => {
+  try {
+    await Note.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Note deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get today's schedule
 router.get('/schedule', async (req, res) => {
   try {
@@ -59,10 +139,11 @@ router.get('/schedule', async (req, res) => {
 // Generate new plan
 router.post('/generate-plan', async (req, res) => {
   try {
-    const { availableHours, mood } = req.body;
+    const { availableHours, mood, startTime } = req.body;
     const subjects = await Subject.find();
     
-    const { blocks, totalStudyTime } = generateSchedule(subjects, availableHours || 4, mood || 'Neutral');
+    const { blocks, totalStudyTime } = generateSchedule(subjects, availableHours || 4, mood || 'Neutral', startTime);
+
     
     const today = new Date().toISOString().split('T')[0];
     

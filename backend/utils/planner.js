@@ -1,11 +1,16 @@
-function generateSchedule(subjects, availableHours, mood) {
+function generateSchedule(subjects, availableHours, mood, startTimeStr) {
   // A simple rule-based algorithm for timetable generation
   const blocks = [];
   const totalMinutes = availableHours * 60;
   let remainingMinutes = totalMinutes;
   
   let startTime = new Date();
-  startTime.setHours(9, 0, 0, 0); // Start at 9:00 AM by default
+  if (startTimeStr) {
+    const [hours, minutes] = startTimeStr.split(':');
+    startTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+  } else {
+    startTime.setHours(9, 0, 0, 0); // Start at 9:00 AM by default
+  }
   
   // Adjust intensity based on mood
   let maxBlockDuration = 60;
@@ -21,17 +26,20 @@ function generateSchedule(subjects, availableHours, mood) {
   
   // Flatten topics and calculate weights
   let topicsToStudy = [];
+  const subjectTimeAllocated = {}; // Keep track of time spent per subject
+
   subjects.forEach(subject => {
+    subjectTimeAllocated[subject._id] = 0;
     subject.topics.forEach(topic => {
       if (!topic.completed) {
         // Priority weight: High=3, Medium=2, Low=1
         const priorityWeight = topic.priority === 'High' ? 3 : topic.priority === 'Medium' ? 2 : 1;
-        // Total weight combines priority and difficulty
         const weight = priorityWeight * topic.difficulty;
         
         topicsToStudy.push({
           subjectId: subject._id,
           subjectName: subject.name,
+          targetTime: subject.targetTime || 60, // Default to 60 if not set
           ...topic.toObject(),
           weight
         });
@@ -48,9 +56,15 @@ function generateSchedule(subjects, availableHours, mood) {
     const topic = topicsToStudy[i];
     if (remainingMinutes <= 0) break;
     
+    // Check if we've already hit the target time for this subject
+    const timeAlreadySpent = subjectTimeAllocated[topic.subjectId] || 0;
+    const timeLeftForSubject = Math.max(0, topic.targetTime - timeAlreadySpent);
+    
+    if (timeLeftForSubject <= 0) continue; // Skip if subject's target time reached
+    
     // Determine block duration
-    let duration = Math.min(topic.estimatedTime, maxBlockDuration, remainingMinutes);
-    if (duration < 15 && topic.estimatedTime >= 15) continue; // Skip blocks that are too short unless the task itself is short
+    let duration = Math.min(topic.estimatedTime, maxBlockDuration, remainingMinutes, timeLeftForSubject);
+    if (duration < 15 && topic.estimatedTime >= 15 && timeLeftForSubject >= 15) continue; 
     
     // Add Study Block
     const blockStartStr = formatTime(startTime);
@@ -68,10 +82,7 @@ function generateSchedule(subjects, availableHours, mood) {
     
     remainingMinutes -= duration;
     totalStudyTime += duration;
-    
-    // If topic still needs time, we'd theoretically re-add it or keep track.
-    // For simplicity, we just allocate max one block per topic in a day,
-    // or if we have lots of time, we could loop. Let's just do one block per topic for now to ensure variety.
+    subjectTimeAllocated[topic.subjectId] += duration;
     
     if (remainingMinutes > breakDuration) {
       // Add Break Block
@@ -89,6 +100,7 @@ function generateSchedule(subjects, availableHours, mood) {
       remainingMinutes -= breakDuration;
     }
   }
+
   
   // Add a final revision block if there's still time and we had study blocks
   if (remainingMinutes >= 30 && blocks.some(b => b.type === 'Study')) {

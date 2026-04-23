@@ -11,6 +11,7 @@ const TopicSchema = new mongoose.Schema({
 const SubjectSchema = new mongoose.Schema({
   name: { type: String, required: true },
   color: { type: String, default: '#6366f1' },
+  targetTime: { type: Number, default: 60 }, // Desired study time in minutes
   topics: [TopicSchema]
 });
 
