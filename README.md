@@ -1,6 +1,10 @@
 # 🧠 BrainBuddy AI
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNivrithi206%2Fbrainbuddy-ai&root-directory=frontend&env=VITE_API_URL)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Nivrithi206/brainbuddy-ai)
+
 **BrainBuddy AI** is a premium, hyper-optimized study planning ecosystem designed for maximum cognitive efficiency. Featuring a sleek **Glassmorphism** aesthetic, it combines narrative productivity with deep-logic AI to help you master complex subjects.
+
 
 ![BrainBuddy AI Preview](./assets/preview.png)
 
