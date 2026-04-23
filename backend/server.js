@@ -22,11 +22,17 @@ app.get('/api/health', (req, res) => {
 
 async function startServer() {
   try {
-    const mongoServer = await MongoMemoryServer.create();
-    const mongoUri = mongoServer.getUri();
+    let mongoUri = process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      console.log('⚠️ No MONGO_URI found. Initializing MongoMemoryServer (In-Memory)...');
+      const mongoServer = await MongoMemoryServer.create();
+      mongoUri = mongoServer.getUri();
+    }
 
     await mongoose.connect(mongoUri);
-    console.log('MongoDB connected (In-Memory)');
+    console.log(process.env.MONGO_URI ? 'MongoDB connected (Remote)' : 'MongoDB connected (In-Memory)');
+
 
     // Seed Data if empty
     const Subject = require('./models/Subject');
