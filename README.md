@@ -2,7 +2,8 @@
 
 **BrainBuddy AI** is a premium, hyper-optimized study planning ecosystem designed for maximum cognitive efficiency. Featuring a sleek **Glassmorphism** aesthetic, it combines narrative productivity with deep-logic AI to help you master complex subjects.
 
-![BrainBuddy AI Preview](file:///C:/Users/nivri/.gemini/antigravity/brain/1641de99-abf3-4cec-9f6f-91ca27e74eee/brainbuddy_ai_preview_1776927237945.png)
+![BrainBuddy AI Preview](./assets/preview.png)
+
 
 ---
 
